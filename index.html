@@ -75,6 +75,21 @@
             100% { opacity: 0; }
         }
 
+        /* Responsive Backdrop styling ensuring it's recognizable but beautifully blended */
+        .blur-bg-engine {
+            position: absolute;
+            width: 104%;
+            height: 104%;
+            top: -2%;
+            left: -2%;
+            background-size: cover;
+            background-position: center;
+            background-image: url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200');
+            filter: blur(6px) brightness(55%);
+            z-index: 1;
+            transition: background-image 0.8s ease-in-out;
+        }
+
         /* Hide scrollbars globally to enforce immersive fullscreen operation */
         ::-webkit-scrollbar {
             display: none;
@@ -120,9 +135,18 @@
 
             <!-- Configuration Form Inputs -->
             <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (No spaces):</label>
-                    <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (No spaces):</label>
+                        <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Photo & Screen Orientation:</label>
+                        <select id="orientation-select" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150">
+                            <option value="landscape">Horizontal (Landscape)</option>
+                            <option value="portrait">Vertical (Portrait)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,7 +199,7 @@
     <div id="app-wrapper" class="hidden relative w-full h-full flex items-center justify-center overflow-hidden">
         
         <!-- Immersive Blurred Event Backdrop Base Layer -->
-        <div id="master-blur-bg" class="blur-bg-engine absolute inset-[-5%] w-[110%] h-[110%] bg-cover bg-center filter blur-3xl brightness-[0.25] transition-all duration-1000 z-1"></div>
+        <div id="master-blur-bg" class="blur-bg-engine absolute inset-[-2%] w-[104%] h-[104%] bg-cover bg-center transition-all duration-1000 z-1"></div>
         
         <!-- Shutter Capture Flash Overlay Layer -->
         <div id="flash-screen" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-[100]"></div>
@@ -190,9 +214,9 @@
         </div>
 
         <!-- STAGE 2: LIVE CAMERA CAPTURE SHUTTER STAGE -->
-        <div id="shoot-screen" class="interactive-stage absolute inset-0 z-10 flex flex-col items-center justify-center p-6 hidden">
-            <!-- Fixed Wide-Screen Preview Workspace -->
-            <div id="camera-workspace-container" class="camera-workspace relative w-full max-w-4xl h-[60vh] md:h-[70vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+        <div id="shoot-screen" class="interactive-stage absolute inset-0 z-10 flex flex-col items-center justify-center p-4 md:p-6 hidden">
+            <!-- Maximized High-Performance Preview Workspace -->
+            <div id="camera-workspace-container" class="camera-workspace relative w-full max-w-6xl h-[78vh] md:h-[84vh] bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300">
                 <video id="booth-preview" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
                 
                 <!-- Dynamic Overlay Message Prompts -->
@@ -214,7 +238,7 @@
             <div class="layout-deck flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center items-stretch">
                 <!-- Option A: Single Photo Frame -->
                 <div class="selection-card glass-panel flex-1 max-w-md p-8 rounded-3xl flex flex-col items-center justify-between text-center transition duration-300 hover:-translate-y-2 hover:border-gold-500/40 cursor-pointer active:scale-[0.98]" onclick="finalizeLayoutSelection(1)">
-                    <div id="single-frame-preview-silhouette" class="silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
+                    <div id="single-frame-preview-silhouette" class="silhouette-box single-frame-silhouette bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
                         <div class="inner-photo-placeholder w-full h-full bg-gradient-to-br from-white/5 to-white/10 rounded"></div>
                     </div>
                     <h3 class="text-2xl font-bold mt-6 text-white">Photo Frame</h3>
@@ -267,6 +291,7 @@
         let rawFolderId = "";
         let framedFolderId = "";
         let selectedCameraId = "";
+        let cameraOrientation = "landscape";
         let currentTemplate = 1;
         let capturedImages = [];
         let localStream = null;
@@ -298,6 +323,9 @@
             }
             if (localStorage.getItem('booth_event_name')) {
                 document.getElementById('event-name-input').value = localStorage.getItem('booth_event_name');
+            }
+            if (localStorage.getItem('booth_orientation')) {
+                document.getElementById('orientation-select').value = localStorage.getItem('booth_orientation');
             }
             if (localStorage.getItem('booth_raw_folder_id')) {
                 document.getElementById('raw-folder-id').value = localStorage.getItem('booth_raw_folder_id');
@@ -502,6 +530,7 @@
             rawFolderId = document.getElementById('raw-folder-id').value.trim();
             framedFolderId = document.getElementById('framed-folder-id').value.trim();
             selectedCameraId = document.getElementById('camera-select').value;
+            cameraOrientation = document.getElementById('orientation-select').value;
 
             if (!rawFolderId || !framedFolderId) {
                 triggerAlertModal("Folder IDs Missing", "Please provide Google Drive Folder IDs for both RAW and FRAMED folders.");
@@ -510,6 +539,25 @@
 
             localStorage.setItem('booth_raw_folder_id', rawFolderId);
             localStorage.setItem('booth_framed_folder_id', framedFolderId);
+            localStorage.setItem('booth_orientation', cameraOrientation);
+
+            // Dynamically resize live camera container based on portrait/landscape choice (Maximised Real Estate)
+            const workspace = document.getElementById('camera-workspace-container');
+            if (cameraOrientation === 'portrait') {
+                workspace.className = "camera-workspace relative w-full max-w-lg h-[80vh] md:h-[85vh] bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300";
+            } else {
+                workspace.className = "camera-workspace relative w-full max-w-6xl h-[80vh] md:h-[85vh] bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300";
+            }
+
+            // Adjust single photo frame selection mockup preview to match confirmed orientation
+            const singleFrameSilhouette = document.getElementById('single-frame-preview-silhouette');
+            if (singleFrameSilhouette) {
+                if (cameraOrientation === 'portrait') {
+                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
+                } else {
+                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-60 h-44 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
+                }
+            }
 
             if (customBgDataUrl) {
                 document.getElementById('master-blur-bg').style.backgroundImage = `url('${customBgDataUrl}')`;
@@ -679,9 +727,14 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // Fixed to Portrait vertical 1200x1800
-                    canvas.width = 1200;
-                    canvas.height = 1800;
+                    // Adapt canvas width/height based on operator selection
+                    if (cameraOrientation === 'portrait') {
+                        canvas.width = 1200;
+                        canvas.height = 1800;
+                    } else {
+                        canvas.width = 1800;
+                        canvas.height = 1200;
+                    }
 
                     drawImageCover(ctx, capturedImages[i], 0, 0, canvas.width, canvas.height);
 
@@ -781,7 +834,7 @@
             }
         }
 
-        // Procedural Vector frame generator adapting to chosen layout
+        // Procedural Vector frame generator adapting to chosen layout and orientation
         function drawFallbackDecorations(ctx, layoutType, titleText) {
             const w = ctx.canvas.width;
             const h = ctx.canvas.height;
@@ -799,10 +852,17 @@
             ctx.textBaseline = 'middle';
             ctx.textAlign = 'center';
             
-            ctx.fillText(eventName.toUpperCase(), w / 2, h - 80);
-            ctx.fillStyle = '#caa366';
-            ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(titleText, w / 2, h - 40);
+            if (cameraOrientation === 'landscape' && layoutType === 1) {
+                ctx.fillText(eventName.toUpperCase(), w / 2, h - 60);
+                ctx.fillStyle = '#caa366';
+                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(titleText, w / 2, h - 25);
+            } else {
+                ctx.fillText(eventName.toUpperCase(), w / 2, h - 80);
+                ctx.fillStyle = '#caa366';
+                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(titleText, w / 2, h - 40);
+            }
         }
 
         // Formatting utilities
