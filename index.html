@@ -120,18 +120,9 @@
 
             <!-- Configuration Form Inputs -->
             <div class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (No spaces):</label>
-                        <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Photo & Screen Orientation:</label>
-                        <select id="orientation-select" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150">
-                            <option value="landscape">Horizontal (Landscape)</option>
-                            <option value="portrait">Vertical (Portrait)</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (No spaces):</label>
+                    <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -276,7 +267,6 @@
         let rawFolderId = "";
         let framedFolderId = "";
         let selectedCameraId = "";
-        let cameraOrientation = "landscape";
         let currentTemplate = 1;
         let capturedImages = [];
         let localStream = null;
@@ -308,9 +298,6 @@
             }
             if (localStorage.getItem('booth_event_name')) {
                 document.getElementById('event-name-input').value = localStorage.getItem('booth_event_name');
-            }
-            if (localStorage.getItem('booth_orientation')) {
-                document.getElementById('orientation-select').value = localStorage.getItem('booth_orientation');
             }
             if (localStorage.getItem('booth_raw_folder_id')) {
                 document.getElementById('raw-folder-id').value = localStorage.getItem('booth_raw_folder_id');
@@ -515,7 +502,6 @@
             rawFolderId = document.getElementById('raw-folder-id').value.trim();
             framedFolderId = document.getElementById('framed-folder-id').value.trim();
             selectedCameraId = document.getElementById('camera-select').value;
-            cameraOrientation = document.getElementById('orientation-select').value;
 
             if (!rawFolderId || !framedFolderId) {
                 triggerAlertModal("Folder IDs Missing", "Please provide Google Drive Folder IDs for both RAW and FRAMED folders.");
@@ -524,7 +510,6 @@
 
             localStorage.setItem('booth_raw_folder_id', rawFolderId);
             localStorage.setItem('booth_framed_folder_id', framedFolderId);
-            localStorage.setItem('booth_orientation', cameraOrientation);
 
             if (customBgDataUrl) {
                 document.getElementById('master-blur-bg').style.backgroundImage = `url('${customBgDataUrl}')`;
@@ -694,14 +679,9 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // Adapt canvas width/height based on operator selection
-                    if (cameraOrientation === 'portrait') {
-                        canvas.width = 1200;
-                        canvas.height = 1800;
-                    } else {
-                        canvas.width = 1800;
-                        canvas.height = 1200;
-                    }
+                    // Fixed to Portrait vertical 1200x1800
+                    canvas.width = 1200;
+                    canvas.height = 1800;
 
                     drawImageCover(ctx, capturedImages[i], 0, 0, canvas.width, canvas.height);
 
@@ -801,7 +781,7 @@
             }
         }
 
-        // Procedural Vector frame generator adapting to chosen layout and orientation
+        // Procedural Vector frame generator adapting to chosen layout
         function drawFallbackDecorations(ctx, layoutType, titleText) {
             const w = ctx.canvas.width;
             const h = ctx.canvas.height;
@@ -816,19 +796,13 @@
 
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textBaseline = 'middle';
             ctx.textAlign = 'center';
             
-            if (cameraOrientation === 'landscape' && layoutType === 1) {
-                ctx.fillText(eventName.toUpperCase(), w / 2, h - 60);
-                ctx.fillStyle = '#caa366';
-                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.fillText(titleText, w / 2, h - 25);
-            } else {
-                ctx.fillText(eventName.toUpperCase(), w / 2, h - 80);
-                ctx.fillStyle = '#caa366';
-                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.fillText(titleText, w / 2, h - 40);
-            }
+            ctx.fillText(eventName.toUpperCase(), w / 2, h - 80);
+            ctx.fillStyle = '#caa366';
+            ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(titleText, w / 2, h - 40);
         }
 
         // Formatting utilities
