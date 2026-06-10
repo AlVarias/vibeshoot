@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpha V Pro Photo Booth</title>
+    <title>AlphaV Photobooth</title>
     <!-- Tailwind CSS for modern, high-performance styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Identity Services & Client Libraries -->
@@ -96,7 +96,7 @@
     <div id="setup-screen" class="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-[#0a0a0e] to-[#12121b] flex items-center justify-center p-6">
         <div class="bg-[#121218]/90 border border-zinc-800 w-full max-w-2xl rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
             <div class="text-center mb-6">
-                <h2 class="text-3xl font-extrabold text-gold-400 tracking-tight">Alpha V Pro Photo Booth</h2>
+                <h2 class="text-3xl font-extrabold text-gold-400 tracking-tight">AlphaV Photobooth</h2>
                 <p class="text-zinc-400 text-sm mt-1">Configure event pathways, physical hardware maps, and Google Cloud authentications</p>
             </div>
 
@@ -120,9 +120,18 @@
 
             <!-- Configuration Form Inputs -->
             <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (alphanumeric only, no spaces):</label>
-                    <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Event Name (No spaces):</label>
+                        <input type="text" id="event-name-input" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150" placeholder="e.g., Wedding_2026" value="Wedding">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Photo & Screen Orientation:</label>
+                        <select id="orientation-select" class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-gold-500 transition duration-150">
+                            <option value="landscape">Horizontal (Landscape)</option>
+                            <option value="portrait">Vertical (Portrait)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -191,7 +200,8 @@
 
         <!-- STAGE 2: LIVE CAMERA CAPTURE SHUTTER STAGE -->
         <div id="shoot-screen" class="interactive-stage absolute inset-0 z-10 flex flex-col items-center justify-center p-6 hidden">
-            <div class="camera-workspace relative w-full max-w-4xl h-[70vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+            <!-- This container class gets dynamically updated based on the Landscape/Portrait selection -->
+            <div id="camera-workspace-container" class="camera-workspace relative w-full max-w-4xl h-[65vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
                 <video id="booth-preview" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
                 
                 <!-- Dynamic Overlay Message Prompts -->
@@ -213,7 +223,7 @@
             <div class="layout-deck flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center items-stretch">
                 <!-- Option A: Single Photo Frame -->
                 <div class="selection-card glass-panel flex-1 max-w-md p-8 rounded-3xl flex flex-col items-center justify-between text-center transition duration-300 hover:-translate-y-2 hover:border-gold-500/40 cursor-pointer active:scale-[0.98]" onclick="finalizeLayoutSelection(1)">
-                    <div class="silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
+                    <div id="single-frame-preview-silhouette" class="silhouette-box single-frame-silhouette bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
                         <div class="inner-photo-placeholder w-full h-full bg-gradient-to-br from-white/5 to-white/10 rounded"></div>
                     </div>
                     <h3 class="text-2xl font-bold mt-6 text-white">Photo Frame</h3>
@@ -257,7 +267,7 @@
         // System Config Credentials (Synchronized with localStorage)
         let CLIENT_ID = '';
         let API_KEY = '';
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        const SCOPES = 'https://www.googleapis.com/auth/drive';
 
         // Local State Machinery
         let tokenClient, accessToken = null;
@@ -266,6 +276,7 @@
         let rawFolderId = "";
         let framedFolderId = "";
         let selectedCameraId = "";
+        let cameraOrientation = "landscape";
         let currentTemplate = 1;
         let capturedImages = [];
         let localStream = null;
@@ -297,6 +308,9 @@
             }
             if (localStorage.getItem('booth_event_name')) {
                 document.getElementById('event-name-input').value = localStorage.getItem('booth_event_name');
+            }
+            if (localStorage.getItem('booth_orientation')) {
+                document.getElementById('orientation-select').value = localStorage.getItem('booth_orientation');
             }
             if (localStorage.getItem('booth_raw_folder_id')) {
                 document.getElementById('raw-folder-id').value = localStorage.getItem('booth_raw_folder_id');
@@ -346,7 +360,7 @@
             }
         }
 
-        // Preload fallback frames from repository directories to bypass manual uploads
+        // Preload fallback frames from repository directories
         function preloadLocalRepositoryAssets() {
             const testSingle = new Image();
             testSingle.onload = () => {
@@ -363,9 +377,7 @@
             testTriple.src = 'frames/triple_frame.png';
         }
 
-        // Event listener array to handle file stream conversions securely
         function setupFileListeners() {
-            // Read Custom Single Frame File
             document.getElementById('single-frame-input').addEventListener('change', function(e) {
                 if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
@@ -377,7 +389,6 @@
                 }
             });
 
-            // Read Custom Triple Frame Strip File
             document.getElementById('triple-frame-input').addEventListener('change', function(e) {
                 if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
@@ -389,7 +400,6 @@
                 }
             });
 
-            // Read Custom Backdrop Base File
             document.getElementById('bg-file-input').addEventListener('change', function(e) {
                 if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
@@ -407,7 +417,7 @@
         }
 
         function setupGapiClient() {
-            if (!CLIENT_ID || !API_KEY) return; // Wait for operator to type them in manually
+            if (!CLIENT_ID || !API_KEY) return; 
             
             if (typeof gapi !== 'undefined') {
                 gapi.load('client', async () => {
@@ -439,12 +449,11 @@
                     });
                 }
             } else {
-                setTimeout(setupGapiClient, 500); // Retry library binding
+                setTimeout(setupGapiClient, 500);
             }
         }
 
         function handleAuthClick() {
-            // First synchronize client credentials from manual operator inputs
             CLIENT_ID = document.getElementById('g-client-id').value.trim();
             API_KEY = document.getElementById('g-api-key').value.trim();
 
@@ -492,6 +501,7 @@
             rawFolderId = document.getElementById('raw-folder-id').value.trim();
             framedFolderId = document.getElementById('framed-folder-id').value.trim();
             selectedCameraId = document.getElementById('camera-select').value;
+            cameraOrientation = document.getElementById('orientation-select').value;
 
             if (!rawFolderId || !framedFolderId) {
                 triggerAlertModal("Folder IDs Missing", "Please provide Google Drive Folder IDs for both RAW and FRAMED folders.");
@@ -500,6 +510,25 @@
 
             localStorage.setItem('booth_raw_folder_id', rawFolderId);
             localStorage.setItem('booth_framed_folder_id', framedFolderId);
+            localStorage.setItem('booth_orientation', cameraOrientation);
+
+            // Dynamically resize live camera container based on portrait/landscape choice
+            const workspace = document.getElementById('camera-workspace-container');
+            if (cameraOrientation === 'portrait') {
+                workspace.className = "camera-workspace relative w-full max-w-md h-[75vh] md:h-[80vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl";
+            } else {
+                workspace.className = "camera-workspace relative w-full max-w-4xl h-[60vh] md:h-[70vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl";
+            }
+
+            // Adjust single photo frame selection mockup preview to match confirmed orientation
+            const singleFrameSilhouette = document.getElementById('single-frame-preview-silhouette');
+            if (singleFrameSilhouette) {
+                if (cameraOrientation === 'portrait') {
+                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
+                } else {
+                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-60 h-44 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
+                }
+            }
 
             if (customBgDataUrl) {
                 document.getElementById('master-blur-bg').style.backgroundImage = `url('${customBgDataUrl}')`;
@@ -509,7 +538,6 @@
             currentCount = isNaN(manualCount) ? 1 : manualCount;
             localStorage.setItem('booth_session_seq_id', currentCount);
 
-            // Hide operator dashboard, launch client event mode
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-wrapper').classList.remove('hidden');
         }
@@ -528,7 +556,6 @@
                     }
                 };
 
-                // Target the specific camera mapping if selected in Operator menu
                 if (selectedCameraId) {
                     constraints.video.deviceId = { exact: selectedCameraId };
                 }
@@ -538,7 +565,6 @@
                 const previewElement = document.getElementById('booth-preview');
                 previewElement.srcObject = localStream;
                 
-                // Pause for 1.5 seconds to let camera focus and light levels adjust
                 setTimeout(runShutterSessionCycle, 1500);
             } catch (err) {
                 triggerAlertModal("Camera Error", "Could not mount camera feed. Connect your DJI Osmo UVC line and check tablet system camera permissions.");
@@ -546,7 +572,6 @@
             }
         }
 
-        // STAGE 2 Logic Loops: Runs sequential countdowns for 3 distinct photos
         function runShutterSessionCycle() {
             const instCard = document.getElementById('instruction-card');
             const countCard = document.getElementById('countdown-card');
@@ -625,7 +650,7 @@
             processOutputsAndSyncCloud();
         }
 
-        // Aspect ratio handling utility: Crops landscape image to fit centered into portrait canvas
+        // Aspect ratio handling utility: Crops landscape image to fit perfectly inside frame zones
         function drawImageCover(ctx, img, dstX, dstY, dstW, dstH) {
             const imgW = img.naturalWidth || img.width;
             const imgH = img.naturalHeight || img.height;
@@ -645,7 +670,7 @@
             ctx.drawImage(img, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
         }
 
-        // STAGE 4 Processors: Multi-threaded async processing block
+        // STAGE 4 Processors: Base64 Google Drive Multiparts
         async function processOutputsAndSyncCloud() {
             const statusLabel = document.getElementById('share-status-headline');
             statusLabel.innerHTML = "Processing & Saving RAW Captures... 📤";
@@ -653,44 +678,45 @@
             const dateStr = getTodayFormatted();
             const paddedCounter = String(currentCount).padStart(3, '0');
 
-            // --- PROCESS STEP 1: UPLOAD ALL UN-TOUCHED RAW COPIES FIRST ---
+            // --- PROCESS STEP 1: UPLOAD RAW UNTOUCHED PHOTOS ---
             for (let i = 0; i < capturedImages.length; i++) {
-                const rawBlob = dataURLtoBlob(capturedImages[i].src);
+                const base64Data = capturedImages[i].src.split(',')[1];
                 const rawName = `${dateStr}_${eventName}_${paddedCounter}_${i + 1}.jpg`;
-                await dispatchFileToDrive(rawBlob, rawName, rawFolderId);
+                await dispatchFileToDrive(base64Data, rawName, rawFolderId);
             }
 
-            statusLabel.innerHTML = "Assembling & Overlaying Frame Layers... 🖌️";
+            statusLabel.innerHTML = "Assembling";
 
             // --- PROCESS STEP 2: STITCH COLLAGE SHEETS & OVERLAYS ---
             if (currentTemplate === 1) {
-                // PHOTO FRAME LAYOUT: Stamp individual frames over all 3 photos
+                // PHOTO FRAME LAYOUT
                 for (let i = 0; i < capturedImages.length; i++) {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = 1200;
-                    canvas.height = 1800;
+                    
+                    // Adapt canvas width/height based on operator selection
+                    if (cameraOrientation === 'portrait') {
+                        canvas.width = 1200;
+                        canvas.height = 1800;
+                    } else {
+                        canvas.width = 1800;
+                        canvas.height = 1200;
+                    }
 
-                    // Centered crop image drawing cover function
-                    drawImageCover(ctx, capturedImages[i], 0, 0, 1200, 1800);
+                    drawImageCover(ctx, capturedImages[i], 0, 0, canvas.width, canvas.height);
 
                     if (singleFrameLoaded) {
-                        ctx.drawImage(singleFrameImg, 0, 0, 1200, 1800);
+                        ctx.drawImage(singleFrameImg, 0, 0, canvas.width, canvas.height);
                     } else {
                         drawFallbackDecorations(ctx, 1, `Photo ${i+1}`);
                     }
 
                     const fileName = `${dateStr}_${eventName}_pframe_${paddedCounter}_${i + 1}.jpg`;
-                    
-                    await new Promise((resolve) => {
-                        canvas.toBlob(async (b) => {
-                            await dispatchFileToDrive(b, fileName, framedFolderId);
-                            resolve();
-                        }, 'image/jpeg', 0.90);
-                    });
+                    const base64Data = canvas.toDataURL('image/jpeg', 0.90).split(',')[1];
+                    await dispatchFileToDrive(base64Data, fileName, framedFolderId);
                 }
             } else if (currentTemplate === 3) {
-                // PHOTO STRIP LAYOUT: Vertical stacked card configuration
+                // PHOTO STRIP LAYOUT: Standard vertical 3-stack
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = 1200;
@@ -715,13 +741,8 @@
                 }
 
                 const fileName = `${dateStr}_${eventName}_pstrip_${paddedCounter}.jpg`;
-
-                await new Promise((resolve) => {
-                    canvas.toBlob(async (b) => {
-                        await dispatchFileToDrive(b, fileName, framedFolderId);
-                        resolve();
-                    }, 'image/jpeg', 0.90);
-                });
+                const base64Data = canvas.toDataURL('image/jpeg', 0.90).split(',')[1];
+                await dispatchFileToDrive(base64Data, fileName, framedFolderId);
             }
 
             // --- PROCESS STEP 3: SYNC STATE COUNTERS & DYNAMIC QR CODES ---
@@ -730,61 +751,84 @@
 
             statusLabel.innerHTML = "Saved successfully!";
             
-            // Build dynamic target QR route pointing right into Framed Folder
             const shareUrl = `https://drive.google.com/drive/folders/${framedFolderId}`;
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareUrl)}`;
             
             document.getElementById('dynamic-qr-img').src = qrApiUrl;
             document.getElementById('qr-display-area').classList.remove('hidden');
 
-            // Set screen reset timing buffer
             setTimeout(returnToStandby, 8000);
         }
 
-        // Multipart upload execution driver
-        async function dispatchFileToDrive(fileBlob, fileName, folderId) {
+        // 100% Bulletproof Google Drive Multipart/Related Upload Engine
+        async function dispatchFileToDrive(base64Data, fileName, folderId) {
             const metadata = { name: fileName, mimeType: 'image/jpeg' };
             if (folderId) {
-                metadata.parents = [folderId];
+                metadata.parents = [folderId]; 
             }
 
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', fileBlob);
+            const boundary = 'booth_upload_boundary_123';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
+
+            const multipartBody =
+                delimiter +
+                'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                JSON.stringify(metadata) +
+                delimiter +
+                'Content-Type: image/jpeg\r\n' +
+                'Content-Transfer-Encoding: base64\r\n\r\n' +
+                base64Data +
+                close_delim;
 
             try {
                 const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
-                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-                    body: formData
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'multipart/related; boundary=' + boundary
+                    },
+                    body: multipartBody
                 });
                 
                 if (!response.ok) {
-                    console.error("Failed to upload: " + fileName, await response.text());
+                    const errText = await response.text();
+                    console.error("Google Drive Upload Failed on " + fileName, errText);
+                    triggerAlertModal("Upload Failed", `Could not save ${fileName}. Ensure App is set to "Production" in Google Cloud.`);
                 }
             } catch (err) {
-                console.error("Network upload failure: " + fileName, err);
+                console.error("Network upload failure on " + fileName, err);
             }
         }
 
-        // Procedural Vector frame generator (triggers if custom PNG upload is bypassed)
+        // Procedural Vector frame generator adapting to chosen layout and orientation
         function drawFallbackDecorations(ctx, layoutType, titleText) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            
             ctx.strokeStyle = '#caa366';
             ctx.lineWidth = 28;
-            ctx.strokeRect(14, 14, 1200 - 28, 1800 - 28);
+            ctx.strokeRect(14, 14, w - 28, h - 28);
 
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
-            ctx.strokeRect(42, 42, 1200 - 84, 1800 - 84);
+            ctx.strokeRect(42, 42, w - 84, h - 84);
 
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(eventName.toUpperCase(), 600, 1715);
-
-            ctx.fillStyle = '#caa366';
-            ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillText(titleText, 600, 1755);
+            
+            if (cameraOrientation === 'landscape' && layoutType === 1) {
+                ctx.fillText(eventName.toUpperCase(), w / 2, h - 60);
+                ctx.fillStyle = '#caa366';
+                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(titleText, w / 2, h - 25);
+            } else {
+                ctx.fillText(eventName.toUpperCase(), w / 2, h - 80);
+                ctx.fillStyle = '#caa366';
+                ctx.font = 'normal 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillText(titleText, w / 2, h - 40);
+            }
         }
 
         // Formatting utilities
@@ -794,15 +838,6 @@
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function dataURLtoBlob(dataurl) {
-            let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            while(n--) {
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            return new Blob([u8arr], {type:mime});
         }
 
         function returnToStandby() {
