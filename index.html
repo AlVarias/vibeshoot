@@ -200,8 +200,8 @@
 
         <!-- STAGE 2: LIVE CAMERA CAPTURE SHUTTER STAGE -->
         <div id="shoot-screen" class="interactive-stage absolute inset-0 z-10 flex flex-col items-center justify-center p-6 hidden">
-            <!-- This container class gets dynamically updated based on the Landscape/Portrait selection -->
-            <div id="camera-workspace-container" class="camera-workspace relative w-full max-w-4xl h-[65vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+            <!-- Fixed Wide-Screen Preview Workspace -->
+            <div id="camera-workspace-container" class="camera-workspace relative w-full max-w-4xl h-[60vh] md:h-[70vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
                 <video id="booth-preview" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
                 
                 <!-- Dynamic Overlay Message Prompts -->
@@ -223,7 +223,7 @@
             <div class="layout-deck flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center items-stretch">
                 <!-- Option A: Single Photo Frame -->
                 <div class="selection-card glass-panel flex-1 max-w-md p-8 rounded-3xl flex flex-col items-center justify-between text-center transition duration-300 hover:-translate-y-2 hover:border-gold-500/40 cursor-pointer active:scale-[0.98]" onclick="finalizeLayoutSelection(1)">
-                    <div id="single-frame-preview-silhouette" class="silhouette-box single-frame-silhouette bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
+                    <div id="single-frame-preview-silhouette" class="silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3">
                         <div class="inner-photo-placeholder w-full h-full bg-gradient-to-br from-white/5 to-white/10 rounded"></div>
                     </div>
                     <h3 class="text-2xl font-bold mt-6 text-white">Photo Frame</h3>
@@ -485,7 +485,21 @@
             document.getElementById('booth-alert-modal').classList.add('hidden');
         }
 
-        // Setup validations and lock screen to mount immersive presentation page
+        // Fullscreen API triggers to engage true tablet kiosk mode
+        function triggerFullscreen() {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen().catch(err => {
+                    console.warn("Fullscreen request declined or bypassed:", err);
+                });
+            } else if (docEl.webkitRequestFullscreen) { /* iOS / Safari */
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.msRequestFullscreen) { /* Microsoft platform fallbacks */
+                docEl.msRequestFullscreen();
+            }
+        }
+
+        // Setup validations, trigger fullscreen, and lock screen to mount immersive presentation page
         function lockAndInitBooth() {
             if (!accessToken) {
                 triggerAlertModal("Drive Authorized", "Please connect and authorize your Google Drive storage workspace before continuing.");
@@ -512,24 +526,6 @@
             localStorage.setItem('booth_framed_folder_id', framedFolderId);
             localStorage.setItem('booth_orientation', cameraOrientation);
 
-            // Dynamically resize live camera container based on portrait/landscape choice
-            const workspace = document.getElementById('camera-workspace-container');
-            if (cameraOrientation === 'portrait') {
-                workspace.className = "camera-workspace relative w-full max-w-md h-[75vh] md:h-[80vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl";
-            } else {
-                workspace.className = "camera-workspace relative w-full max-w-4xl h-[60vh] md:h-[70vh] bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl";
-            }
-
-            // Adjust single photo frame selection mockup preview to match confirmed orientation
-            const singleFrameSilhouette = document.getElementById('single-frame-preview-silhouette');
-            if (singleFrameSilhouette) {
-                if (cameraOrientation === 'portrait') {
-                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-44 h-60 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
-                } else {
-                    singleFrameSilhouette.className = "silhouette-box single-frame-silhouette w-60 h-44 bg-[#0d0d10] border-4 border-white rounded-lg shadow-2xl flex p-3";
-                }
-            }
-
             if (customBgDataUrl) {
                 document.getElementById('master-blur-bg').style.backgroundImage = `url('${customBgDataUrl}')`;
             }
@@ -538,6 +534,10 @@
             currentCount = isNaN(manualCount) ? 1 : manualCount;
             localStorage.setItem('booth_session_seq_id', currentCount);
 
+            // Trigger Fullscreen immediately as the UI locks into production booth mode
+            triggerFullscreen();
+
+            // Hide operator dashboard, launch client event mode
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('app-wrapper').classList.remove('hidden');
         }
