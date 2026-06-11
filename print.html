@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeShoot - Keepsake Showcase</title>
+    <!-- Tailwind CSS for high-fidelity layouts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-panel {
+            background: rgba(18, 18, 24, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gold-glow {
+            box-shadow: 0 0 30px rgba(202, 163, 102, 0.15);
+        }
+        /* Custom styled frames representing canvas rendering */
+        .keepsake-border {
+            border: 14px solid #caa366;
+            outline: 2px solid #ffffff;
+            outline-offset: -12px;
+        }
+        .strip-shadow {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-[#08080b] text-white min-h-screen font-sans flex flex-col justify-between">
+
+    <!-- HEADER BRANDING -->
+    <header class="w-full border-b border-zinc-900 py-6 px-8 flex justify-between items-center z-10 bg-[#0c0c10]/80 sticky top-0 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl font-black tracking-tight text-white">AlphaV <span class="text-gold-400">Photobooth</span></span>
+            <span class="text-xs font-bold bg-gold-500/10 text-gold-400 px-2.5 py-1 rounded-full border border-gold-500/20">Output Renderer</span>
+        </div>
+        <div class="text-zinc-500 text-xs font-mono">Keepsake Generation: v1.0.3</div>
+    </header>
+
+    <!-- MAIN DISPLAY HUB -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- CONTROL BAR & INFO (3 columns) -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="glass-panel p-6 rounded-3xl space-y-4">
+                <h3 class="text-lg font-bold text-gold-400">Portrait Rendering Engine</h3>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                    This preview shows how raw landscape camera frames are automatically processed, cropped vertically, and saved directly to your Google Drive and local USB folders.
+                </p>
+                <div class="space-y-2 text-xs text-zinc-500 font-mono">
+                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                        <span>Event Name:</span>
+                        <span class="text-white">Wedding</span>
+                    </div>
+                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                        <span>Session Count:</span>
+                        <span class="text-white">014</span>
+                    </div>
+                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                        <span>Target Resolution:</span>
+                        <span class="text-white">1200 x 1800 px</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>File Encoding:</span>
+                        <span class="text-emerald-400 font-bold">JPEG (90% Quality)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ASSET LEGEND -->
+            <div class="glass-panel p-6 rounded-3xl space-y-3 text-sm">
+                <h4 class="font-bold text-white mb-2">Folder Distribution Map</h4>
+                <div class="flex gap-3 items-start">
+                    <div class="p-2 bg-zinc-900 rounded-lg text-lg">📁</div>
+                    <div>
+                        <div class="font-bold text-zinc-300">Folder 1 (RAW)</div>
+                        <div class="text-xs text-zinc-500 mt-0.5">Stores the 3 landscape originals directly: <br><span class="font-mono text-zinc-400">2026-06-11_Wedding_014_1.jpg</span></div>
+                    </div>
+                </div>
+                <div class="flex gap-3 items-start pt-2">
+                    <div class="p-2 bg-gold-950/20 text-gold-400 rounded-lg text-lg">🖼️</div>
+                    <div>
+                        <div class="font-bold text-gold-400">Folder 2 (FRAMED)</div>
+                        <div class="text-xs text-zinc-500 mt-0.5">Stores selected compiled overlays: <br><span class="font-mono text-zinc-400">2026-06-11_Wedding_pstrip_014.jpg</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OUTPUT PREVIEWS (8 columns) -->
+        <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+            
+            <!-- COLUMN 1: THE COMPILED PHOTO STRIP -->
+            <div class="space-y-4 flex flex-col items-center">
+                <span class="text-xs font-bold text-zinc-400 tracking-widest uppercase">Compiled Photo Strip Output</span>
+                
+                <!-- Physical Photo Strip Simulation -->
+                <div class="keepsake-border strip-shadow w-[290px] h-[435px] bg-white flex flex-col justify-around p-3.5 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] gold-glow">
+                    <!-- Grid background mimicking high quality print card -->
+                    <div class="absolute inset-0 bg-neutral-50/10 pointer-events-none"></div>
+                    
+                    <!-- 3 Vertical Photo Slots with Landscape Cover Crop -->
+                    <div class="w-full h-[120px] overflow-hidden rounded-sm shadow-inner relative">
+                        <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="w-full h-[120px] overflow-hidden rounded-sm shadow-inner relative">
+                        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="w-full h-[120px] overflow-hidden rounded-sm shadow-inner relative">
+                        <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                
+                <span class="text-xs text-zinc-500 font-mono">Aspect Ratio: 2:3 Vertical Strip</span>
+            </div>
+
+            <!-- COLUMN 2: SINGLE PHOTO FRAME PORTRAIT -->
+            <div class="space-y-4 flex flex-col items-center">
+                <span class="text-xs font-bold text-zinc-400 tracking-widest uppercase">Single Photo Frame Output</span>
+                
+                <!-- Single Frame Simulation -->
+                <div class="keepsake-border strip-shadow w-[290px] h-[435px] bg-zinc-950 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] gold-glow flex flex-col justify-end">
+                    
+                    <!-- Centered Cropped Image covering the canvas -->
+                    <div class="absolute inset-0 z-1">
+                        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <!-- Embedded Solid Frame Overlay details (CSS Simulation of custom PNG layer) -->
+                    <div class="absolute inset-0 border-[16px] border-amber-900/10 pointer-events-none z-10"></div>
+                </div>
+                
+                <span class="text-xs text-zinc-500 font-mono">Aspect Ratio: 2:3 Single Portrait</span>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER SIGNATURE -->
+    <footer class="w-full border-t border-zinc-900 py-6 text-center text-zinc-600 text-xs bg-[#050507]/90 mt-8">
+        AlphaV Photobooth Renderer Platform • All Rights Reserved
+    </footer>
+
+</body>
+</html>
