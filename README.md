@@ -1,4 +1,4 @@
-📸 Alpha V Pro Photo Booth Deployment Guide
+📸 Vibeshoot Photo Booth Deployment Guide
 
 Follow this guide to host your professional, serverless glassmorphism Photo Booth on GitHub Pages, connecting your Lenovo tablet and DJI Osmo Nano securely to Google Drive.
 
